@@ -12,7 +12,8 @@ $Keep = @()
 foreach ($Line in Get-Content $Ledger) {
 	$Id, $Started, $Who, $Exe = $Line -split "`t"
 	$P = Get-Process -Id $Id -ErrorAction SilentlyContinue
-	$Ours = $P -and $P.StartTime.ToString('o') -eq $Started
+	# StartTime is null or throws for a process that exited a moment ago.
+	try { $Ours = $P -and $P.StartTime -and $P.StartTime.ToString('o') -eq $Started } catch { $Ours = $false }
 	if (-not $Ours) { continue }   # finished, or the PID now belongs to someone else
 
 	if ($All -or ($Owner -and $Who -eq $Owner)) {
@@ -20,7 +21,8 @@ foreach ($Line in Get-Content $Ledger) {
 		Get-CimInstance Win32_Process -Filter "ParentProcessId=$Id" -ErrorAction SilentlyContinue |
 			ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 		Stop-Process -Id $Id -Force -ErrorAction SilentlyContinue
-		$null = $P.WaitForExit(5000)
+		# An editor can take a while to unwind; only call it stuck after half a minute.
+		$null = $P.WaitForExit(30000)
 		if (Get-Process -Id $Id -ErrorAction SilentlyContinue) {
 			"STUCK pid $Id $Exe ($Who): did not exit, likely hung in the kernel; needs a reboot"
 			$Keep += $Line
