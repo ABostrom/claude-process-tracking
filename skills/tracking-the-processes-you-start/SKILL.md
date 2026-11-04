@@ -17,6 +17,7 @@ Both scripts live beside this file. The ledger, `runs.tsv`, is written next to t
 |---|---|
 | Start and wait (exit code passes through) | `Start-Tracked.ps1 -FilePath <exe> -ArgumentList a,b -Owner <task> -StdOut <log>` |
 | Start in the background | add `-NoWait`, then poll the log file |
+| One heavy run on the machine at a time | add `-WaitForClear`: waits until no other owner's run is live, then starts; check and start happen under one lock, so two agents cannot both start |
 | What is still running | `Stop-Tracked.ps1` |
 | End your runs | `Stop-Tracked.ps1 -Owner <task>` |
 | End every recorded run | `Stop-Tracked.ps1 -All`, only when the user asks |
